@@ -3,44 +3,53 @@ kind: Deployment
 metadata:
   name: laravel-app
   labels:
-    app: laravel
+    app: laravel-app
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: laravel
+      app: laravel-app
   template:
     metadata:
       labels:
-        app: laravel
+        app: laravel-app
     spec:
       containers:
-        - name: laravel
+        - name: laravel-container
           image: 686255941923.dkr.ecr.ap-south-1.amazonaws.com/laravel-app:latest
           ports:
             - containerPort: 80
           env:
             - name: APP_ENV
-              value: "production"
+              value: production
+            - name: APP_DEBUG
+              value: "false"
             - name: APP_KEY
               valueFrom:
                 secretKeyRef:
-                  name: laravel-secret
+                  name: laravel-secrets
                   key: app_key
             - name: DB_HOST
-              value: "mysql-service"
+              value: mysql-service
             - name: DB_PORT
               value: "3306"
-            - name: DB_DATABASE
-              value: "laravel"
-            - name: DB_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: laravel-secret
-                  key: db_user
-            - name: DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: laravel-secret
-                  key: db_password
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 60
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
 
