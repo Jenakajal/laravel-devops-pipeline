@@ -1,31 +1,36 @@
-# Stage 1: Build Laravel dependencies
-FROM composer:2.6 AS vendor
+# Stage 1: Base PHP image
+FROM php:8.0-fpm as base
 
-WORKDIR /app
-
-COPY laravel-app/composer.json laravel-app/composer.lock ./
-RUN composer install --no-dev --prefer-dist --no-interaction
-
-# Stage 2: Laravel App with PHP
-FROM php:8.2-fpm
-
-# Install system dependencies
+# Install dependencies
 RUN apt-get update && apt-get install -y \
-    git curl zip unzip libzip-dev libpng-dev libonig-dev libxml2-dev \
+    git \
+    curl \
+    zip \
+    unzip \
+    libzip-dev \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
     && docker-php-ext-install pdo pdo_mysql zip exif pcntl bcmath
 
+# Set working directory
 WORKDIR /var/www
 
-# Copy Laravel source
-COPY laravel-app/ ./
+# Copy Laravel app's composer.json and composer.lock files to Docker container
+COPY laravel-app/composer.json laravel-app/composer.lock ./
 
-# Copy vendor files
-COPY --from=vendor /app/vendor ./vendor
+# Install Composer dependencies (this should work if the artisan file is present)
+RUN composer install --no-dev --prefer-dist --no-interaction
 
-# Set permissions
-RUN chown -R www-data:www-data /var/www \
-    && chmod -R 775 /var/www/storage /var/www/bootstrap/cache
+# Stage 2: Copy the entire Laravel app
+COPY laravel-app /var/www
 
-EXPOSE 9000
+# Set file permissions for Laravel app
+RUN chown -R www-data:www-data /var/www
+
+# Expose port 80
+EXPOSE 80
+
+# Start the PHP-FPM server
 CMD ["php-fpm"]
 
