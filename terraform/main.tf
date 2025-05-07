@@ -1,48 +1,82 @@
 provider "aws" {
-  region = var.region
+  region = var.aws_region
 }
 
-module "vpc" {
-  source  = "terraform-aws-modules/vpc/aws"
-  version = "3.14.0"
+# IAM Role for EKS Cluster
+resource "aws_iam_role" "eks_cluster_role" {
+  name = "eksClusterRole"
 
-  name = "eks-vpc"
-  cidr = "10.0.0.0/16"
-
-  azs             = ["${var.region}a", "${var.region}b"]
-  public_subnets  = ["10.0.1.0/24", "10.0.2.0/24"]
-  private_subnets = ["10.0.3.0/24", "10.0.4.0/24"]
-
-  enable_nat_gateway = true
-  single_nat_gateway = true
-
-  tags = {
-    Name = "eks-vpc"
-  }
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Action = "sts:AssumeRole",
+      Effect = "Allow",
+      Principal = {
+        Service = "eks.amazonaws.com"
+      }
+    }]
+  })
 }
 
-module "eks" {
-  source  = "terraform-aws-modules/eks/aws"
-  version = "19.15.3"
+resource "aws_iam_role_policy_attachment" "eks_cluster_attach" {
+  role       = aws_iam_role.eks_cluster_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+}
 
-  cluster_name    = var.cluster_name
-  cluster_version = "1.28"
-  subnets         = module.vpc.private_subnets
-  vpc_id          = module.vpc.vpc_id
+# IAM Role for Node Group
+resource "aws_iam_role" "eks_node_role" {
+  name = "eksNodeGroupRole"
 
-  eks_managed_node_groups = {
-    default = {
-      desired_capacity = 2
-      max_capacity     = 2
-      min_capacity     = 1
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Action = "sts:AssumeRole",
+      Effect = "Allow",
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+    }]
+  })
+}
 
-      instance_types = ["t3.medium"]
-    }
+resource "aws_iam_role_policy_attachment" "eks_worker_node_policy" {
+  role       = aws_iam_role.eks_node_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+}
+
+resource "aws_iam_role_policy_attachment" "ecr_read_policy" {
+  role       = aws_iam_role.eks_node_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
+# EKS Cluster
+resource "aws_eks_cluster" "eks_cluster" {
+  name     = var.cluster_name
+  role_arn = aws_iam_role.eks_cluster_role.arn
+
+  vpc_config {
+    subnet_ids = var.subnet_ids
   }
 
-  tags = {
-    Environment = "dev"
-    Terraform   = "true"
+  depends_on = [aws_iam_role_policy_attachment.eks_cluster_attach]
+}
+
+# Node Group
+resource "aws_eks_node_group" "node_group" {
+  cluster_name    = aws_eks_cluster.eks_cluster.name
+  node_group_name = "${var.cluster_name}-nodes"
+  node_role_arn   = aws_iam_role.eks_node_role.arn
+  subnet_ids      = var.subnet_ids
+  scaling_config {
+    desired_size = 2
+    max_size     = 3
+    min_size     = 1
   }
+
+  depends_on = [
+    aws_eks_cluster.eks_cluster,
+    aws_iam_role_policy_attachment.eks_worker_node_policy,
+    aws_iam_role_policy_attachment.ecr_read_policy
+  ]
 }
 
