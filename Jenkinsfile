@@ -3,17 +3,14 @@ pipeline {
 
     environment {
         IMAGE_NAME = "laravel-app"
-        AWS_REGION = "us-east-1"
-        ECR_REPO = "your_ecr_repo_url"  // Replace with actual ECR repo
+        AWS_REGION = "ap-south-1"
+        AWS_ACCOUNT_ID = "686255941923"
+        ECR_REPO = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${IMAGE_NAME}"
     }
 
     stages {
 
-        stage('Checkout') {
-            steps {
-                git branch: 'main', url: 'https://github.com/your-repo/laravel-devops-pipeline.git'
-            }
-        }
+        // ❌ Removed the unnecessary checkout stage (Jenkins auto-checks out code from GitHub SCM)
 
         stage('Build Docker Image') {
             steps {
@@ -34,7 +31,7 @@ pipeline {
             }
         }
 
-        stage('Push Docker Image') {
+        stage('Tag & Push Docker Image') {
             steps {
                 script {
                     sh '''
@@ -49,6 +46,7 @@ pipeline {
             steps {
                 script {
                     sh '''
+                    aws eks update-kubeconfig --region $AWS_REGION --name devops-eks-cluster
                     kubectl apply -f deployment.yml
                     kubectl apply -f service.yml
                     '''
@@ -60,7 +58,8 @@ pipeline {
             steps {
                 script {
                     sh '''
-                    ansible-playbook -i inventory.ini ansible/deploy.yml
+                    cd ansible
+                    ansible-playbook -i inventory.ini playbook.yml
                     '''
                 }
             }
