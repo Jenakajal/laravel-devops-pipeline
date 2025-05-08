@@ -11,6 +11,8 @@ provider "aws" {
   region = var.region
 }
 
+data "aws_availability_zones" "available" {}
+
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "5.1.2"
@@ -32,8 +34,6 @@ module "vpc" {
   }
 }
 
-data "aws_availability_zones" "available" {}
-
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "20.13.0"
@@ -44,14 +44,14 @@ module "eks" {
   subnet_ids = module.vpc.private_subnets
   vpc_id     = module.vpc.vpc_id
 
-  eks_managed_node_groups = {
-    jenkins_nodes = {  # Changed node group name to 'jenkins_nodes'
-      instance_types = var.node_group_instance_types
-      desired_size   = var.desired_size
-      min_size       = var.min_size
-      max_size       = var.max_size
-    }
+eks_managed_node_groups = {
+  eks_nodes = {
+    instance_types = var.node_group_instance_types
+    desired_size   = var.desired_size
+    min_size       = var.min_size
+    max_size       = var.max_size
   }
+}
 
   tags = {
     Environment = "dev"
@@ -63,13 +63,15 @@ output "cluster_name" {
   value = module.eks.cluster_name
 }
 
-output "kubeconfig" {
-  value     = module.eks.kubeconfig
+output "cluster_endpoint" {
+  value = module.eks.cluster_endpoint
+}
+
+output "cluster_certificate_authority_data" {
+  value     = module.eks.cluster_certificate_authority_data
   sensitive = true
 }
 
 output "vpc_id" {
   value = module.vpc.vpc_id
 }
-
-
