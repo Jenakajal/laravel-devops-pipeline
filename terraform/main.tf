@@ -1,67 +1,52 @@
 provider "aws" {
-  region = "us-west-2"  # Change to your desired region
+  region = var.aws_region
 }
 
-# VPC and Networking setup
-module "vpc" {
-  source = "terraform-aws-modules/vpc/aws"
-  name   = "eks-vpc"
-  cidr   = "10.0.0.0/16"  # Change to your desired CIDR block
-
-  enable_dns_support   = true
+# Define VPC
+resource "aws_vpc" "eks_vpc" {
+  cidr_block = var.vpc_cidr_block
+  enable_dns_support = true
   enable_dns_hostnames = true
-
-  public_subnets = ["10.0.1.0/24", "10.0.2.0/24"]  # Define your public subnets
-  private_subnets = ["10.0.3.0/24", "10.0.4.0/24"]  # Define your private subnets
-
-  tags = {
-    "Owner"       = "your-name"
-    "Environment" = "dev"
-  }
 }
 
-# Define EKS cluster
-module "eks" {
-  source          = "terraform-aws-modules/eks/aws"
-  cluster_name    = var.cluster_name
-  cluster_version = "1.21"  # EKS version, change as needed
-  subnets         = module.vpc.private_subnets  # Use private subnets for EKS
-  vpc_id          = module.vpc.vpc_id
+# Define public subnets
+resource "aws_subnet" "eks_public_subnet" {
+  count = 2
+  vpc_id                  = aws_vpc.eks_vpc.id
+  cidr_block              = element(var.public_subnet_cidr_blocks, count.index)
+  availability_zone       = element(data.aws_availability_zones.available.names, count.index)
+  map_public_ip_on_launch = true
+}
 
+# Define private subnets
+resource "aws_subnet" "eks_private_subnet" {
+  count = 2
+  vpc_id                  = aws_vpc.eks_vpc.id
+  cidr_block              = element(var.private_subnet_cidr_blocks, count.index)
+  availability_zone       = element(data.aws_availability_zones.available.names, count.index)
+}
+
+# Define the EKS Cluster
+module "eks" {
+  source = "terraform-aws-modules/eks/aws"
+
+  cluster_name    = var.cluster_name
+  cluster_version = "1.21"  # Use the EKS Kubernetes version you need
+  subnets         = flatten([aws_subnet.eks_public_subnet[*].id, aws_subnet.eks_private_subnet[*].id]) # Fix: Correctly passing subnets as an array
+  vpc_id          = aws_vpc.eks_vpc.id
   node_groups = {
-    eks_node_group = {
+    eks_nodes = {
       desired_capacity = 2
       max_capacity     = 3
       min_capacity     = 1
-      instance_type    = "t3.medium"  # Change instance type as needed
-      key_name         = "your-ssh-key"  # Optional: Use your SSH key if needed for EC2 instances
+      instance_type    = "t3.medium"
     }
   }
 
-  node_group_defaults = {
-    ami_id = "ami-xxxxxxxxxxxxxxxxx"  # Optional: specify a custom AMI ID if needed
-  }
-
-  tags = {
-    "Owner"       = "your-name"
-    "Environment" = "dev"
-  }
+  node_group_name = "eks-node-group"
 }
 
-# Output the cluster details
-output "eks_cluster_name" {
-  value = module.eks.cluster_name
-}
+# Data source for availability zones (to distribute subnets)
+data "aws_availability_zones" "available" {}
 
-output "eks_cluster_endpoint" {
-  value = module.eks.cluster_endpoint
-}
-
-output "eks_cluster_kubeconfig" {
-  value = module.eks.kubeconfig
-}
-
-output "eks_node_group_name" {
-  value = module.eks.node_groups
-}
 
