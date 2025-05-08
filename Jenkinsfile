@@ -10,12 +10,11 @@ pipeline {
 
     stages {
 
-        // ❌ Removed the unnecessary checkout stage (Jenkins auto-checks out code from GitHub SCM)
-
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh 'docker build -t $IMAGE_NAME .'
+                    // Use sudo for docker build command
+                    sh 'sudo docker build -t $IMAGE_NAME .'
                 }
             }
         }
@@ -25,7 +24,7 @@ pipeline {
                 script {
                     sh '''
                     aws ecr get-login-password --region $AWS_REGION | \
-                    docker login --username AWS --password-stdin $ECR_REPO
+                    sudo docker login --username AWS --password-stdin $ECR_REPO
                     '''
                 }
             }
@@ -35,8 +34,8 @@ pipeline {
             steps {
                 script {
                     sh '''
-                    docker tag $IMAGE_NAME:latest $ECR_REPO:latest
-                    docker push $ECR_REPO:latest
+                    sudo docker tag $IMAGE_NAME:latest $ECR_REPO:latest
+                    sudo docker push $ECR_REPO:latest
                     '''
                 }
             }
