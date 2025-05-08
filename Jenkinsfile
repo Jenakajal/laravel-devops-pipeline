@@ -13,8 +13,8 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Use sudo for docker build command
-                    sh 'sudo docker build -t $IMAGE_NAME .'
+                    // Build the Docker image with correct build context
+                    sh 'sudo docker build -t $IMAGE_NAME -f Dockerfile .'
                 }
             }
         }
