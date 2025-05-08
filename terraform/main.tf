@@ -107,8 +107,9 @@ resource "aws_eks_node_group" "node_group" {
   subnet_ids      = [aws_subnet.subnet1.id, aws_subnet.subnet2.id]
 
   scaling_config {
-    min_size = 1
-    max_size = 3
+    desired_size = 2  # Add desired_size here
+    min_size     = 1
+    max_size     = 3
   }
 
   depends_on = [
