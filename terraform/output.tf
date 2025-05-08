@@ -15,7 +15,8 @@ output "eks_cluster_endpoint" {
 
 output "eks_cluster_kubeconfig" {
   description = "Kubeconfig for EKS cluster"
-  value       = module.eks.cluster_kubeconfig
+  value       = module.eks.kubeconfig
+  sensitive   = true
 }
 
 output "eks_node_group" {
