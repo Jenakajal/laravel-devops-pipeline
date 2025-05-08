@@ -14,7 +14,7 @@ pipeline {
             steps {
                 script {
                     // Build the Docker image with correct build context
-                    sh 'sudo docker build -t $IMAGE_NAME -f Dockerfile .'
+                    sh 'docker build -t $IMAGE_NAME -f Dockerfile .'
                 }
             }
         }
@@ -23,15 +23,12 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'aws-creds', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
                     script {
-                        // Configure AWS CLI with the provided credentials
                         sh '''
                         aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
                         aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
                         aws configure set region $AWS_REGION
 
-                        // Log into ECR
-                        aws ecr get-login-password --region $AWS_REGION | \
-                        sudo docker login --username AWS --password-stdin $ECR_REPO
+                        aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPO
                         '''
                     }
                 }
@@ -41,10 +38,9 @@ pipeline {
         stage('Tag & Push Docker Image') {
             steps {
                 script {
-                    // Tag and push the Docker image to ECR
                     sh '''
-                    sudo docker tag $IMAGE_NAME:latest $ECR_REPO:latest
-                    sudo docker push $ECR_REPO:latest
+                    docker tag $IMAGE_NAME:latest $ECR_REPO:latest
+                    docker push $ECR_REPO:latest
                     '''
                 }
             }
@@ -53,7 +49,6 @@ pipeline {
         stage('Deploy to EKS') {
             steps {
                 script {
-                    // Deploy to EKS and apply Kubernetes configurations
                     sh '''
                     aws eks update-kubeconfig --region $AWS_REGION --name devops-eks-cluster
                     kubectl apply -f deployment.yml
@@ -66,7 +61,6 @@ pipeline {
         stage('Post Deploy Config with Ansible') {
             steps {
                 script {
-                    // Run the Ansible playbook for post-deployment configuration
                     sh '''
                     cd ansible
                     ansible-playbook -i inventory.ini playbook.yml
