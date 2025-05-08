@@ -1,116 +1,64 @@
+# main.tf
 provider "aws" {
-  region = "us-west-2"  # Adjust your region accordingly
-}
-
-module "vpc" {
-  source = "terraform-aws-modules/vpc/aws"
-  name   = "eks-vpc"
-  cidr   = "10.0.0.0/16"
+  region = var.aws_region
 }
 
 module "eks" {
-  source          = "terraform-aws-modules/eks/aws"
-  cluster_name    = "my-eks-cluster"
+  source = "terraform-aws-modules/eks/aws"
+  cluster_name = var.cluster_name
   cluster_version = "1.21"
-  subnets         = module.vpc.private_subnets
-  vpc_id          = module.vpc.vpc_id
-  node_group_defaults = {
-    instance_type = "t2.micro"
-    min_size      = 1
-    max_size      = 3
-  }
+  subnets = var.subnets
+  vpc_id = var.vpc_id
+
   node_groups = {
     eks_nodes = {
-      desired_size = 2
-      instance_type = "t2.micro"
-      key_name      = var.key_name
+      desired_capacity = 2
+      max_capacity     = 3
+      min_capacity     = 1
+      instance_type    = "t3.medium"
     }
   }
-
-  # ENI Plugin (VPC CNI) settings
-  enable_vpc_cni = true
 }
 
-# Security group for worker nodes
+# First security group for EKS worker nodes
 resource "aws_security_group" "eks_worker_sec_group" {
-  name_prefix            = "eks-worker-"
-  description            = "Allow access to EKS worker nodes"
-  vpc_id                 = module.vpc.vpc_id
-  revoke_rules_on_delete = false
+  name        = "eks_worker_sec_group"
+  description = "Security group for EKS worker nodes"
+  vpc_id      = var.vpc_id
 
-  egress {
-    cidr_blocks = ["0.0.0.0/0"]
+  ingress {
     from_port   = 0
     to_port     = 65535
     protocol    = "tcp"
-  }
-
-  ingress {
     cidr_blocks = ["0.0.0.0/0"]
-    from_port   = 0
-    to_port     = 65535
-    protocol    = "tcp"
-  }
-
-  tags = {
-    Environment = "dev"
-    Terraform   = "true"
-  }
-}
-
-resource "aws_iam_role" "eks_role" {
-  name = "eks-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action    = "sts:AssumeRole"
-        Effect    = "Allow"
-        Principal = {
-          Service = "eks.amazonaws.com"
-        }
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy" "eks_node_policy" {
-  name   = "eks-node-policy"
-  role   = aws_iam_role.eks_role.name
-  policy = data.aws_iam_policy_document.eks_node_policy_document.json
-}
-
-data "aws_iam_policy_document" "eks_node_policy_document" {
-  statement {
-    actions   = ["ec2:DescribeInstances", "ec2:DescribeVolumes", "ec2:AttachVolume"]
-    resources = ["*"]
-  }
-}
-
-resource "aws_security_group" "eks_sec_group" {
-  name_prefix   = "eks-sec-group-"
-  description   = "Allow access to EKS Cluster"
-  vpc_id        = module.vpc.vpc_id
-  revoke_rules_on_delete = false
-
-  ingress {
-    cidr_blocks = ["0.0.0.0/0"]
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
   }
 
   egress {
-    cidr_blocks = ["0.0.0.0/0"]
     from_port   = 0
     to_port     = 65535
     protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# Second security group (if needed) with a unique name
+resource "aws_security_group" "eks_worker_sec_group_2" {
+  name        = "eks_worker_sec_group_2"
+  description = "Another security group for EKS worker nodes"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
-    Environment = "dev"
-    Terraform   = "true"
+  egress {
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 

@@ -1,26 +1,41 @@
-resource "aws_security_group" "eks_worker_sec_group" {
-  name_prefix   = "eks-worker-sec-group-"
-  description   = "Allow access to EKS worker nodes"
-  vpc_id        = module.vpc.vpc_id
-  revoke_rules_on_delete = false
+# resource.tf
+# Define security group rules or any other resources for your EKS cluster.
 
-  egress {
-    cidr_blocks = ["0.0.0.0/0"]
-    from_port   = 0
-    to_port     = 65535
-    protocol    = "tcp"
-  }
+# Security group rules for the first security group
+resource "aws_security_group_rule" "allow_ssh_access" {
+  type        = "ingress"
+  from_port   = 22
+  to_port     = 22
+  protocol    = "tcp"
+  cidr_blocks = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.eks_worker_sec_group.id
+}
 
-  ingress {
-    cidr_blocks = ["0.0.0.0/0"]
-    from_port   = 0
-    to_port     = 65535
-    protocol    = "tcp"
-  }
+resource "aws_security_group_rule" "allow_http_access" {
+  type        = "ingress"
+  from_port   = 80
+  to_port     = 80
+  protocol    = "tcp"
+  cidr_blocks = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.eks_worker_sec_group.id
+}
 
-  tags = {
-    Environment = "dev"
-    Terraform   = "true"
-  }
+# Security group rules for the second security group
+resource "aws_security_group_rule" "allow_ssh_access_2" {
+  type        = "ingress"
+  from_port   = 22
+  to_port     = 22
+  protocol    = "tcp"
+  cidr_blocks = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.eks_worker_sec_group_2.id
+}
+
+resource "aws_security_group_rule" "allow_http_access_2" {
+  type        = "ingress"
+  from_port   = 80
+  to_port     = 80
+  protocol    = "tcp"
+  cidr_blocks = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.eks_worker_sec_group_2.id
 }
 

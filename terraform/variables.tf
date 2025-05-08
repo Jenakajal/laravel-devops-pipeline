@@ -1,15 +1,22 @@
-variable "key_name" {
-  description = "The EC2 Key Name to allow access to the EKS instances"
-  type        = string
-}
-
-variable "region" {
+# variable.tf
+variable "aws_region" {
   description = "AWS region"
-  default     = "us-west-2"  # Adjust region accordingly
+  type        = string
+  default     = "us-west-2"
 }
 
 variable "vpc_id" {
-  description = "VPC ID"
+  description = "VPC ID for the EKS Cluster"
+  type        = string
+}
+
+variable "subnets" {
+  description = "List of subnet IDs for the EKS cluster"
+  type        = list(string)
+}
+
+variable "cluster_name" {
+  description = "Name of the EKS cluster"
   type        = string
 }
 
