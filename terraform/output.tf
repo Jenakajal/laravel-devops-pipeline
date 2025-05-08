@@ -1,32 +1,28 @@
-# outputs.tf
-
-output "cluster_name" {
-  description = "The name of the EKS cluster."
-  value       = aws_eks_cluster.eks_cluster.name
+output "eks_cluster_name" {
+  value = module.eks.cluster_name
 }
 
-output "cluster_endpoint" {
-  description = "The endpoint of the EKS cluster."
-  value       = aws_eks_cluster.eks_cluster.endpoint
+output "eks_cluster_endpoint" {
+  value = module.eks.cluster_endpoint
 }
 
-output "cluster_arn" {
-  description = "The ARN of the EKS cluster."
-  value       = aws_eks_cluster.eks_cluster.arn
+output "eks_cluster_arn" {
+  value = module.eks.cluster_arn
 }
 
 output "node_group_name" {
-  description = "The name of the node group."
-  value       = aws_eks_node_group.node_group.node_group_name
+  value = module.eks.node_groups["eks_nodes"].node_group_name
 }
 
 output "node_group_status" {
-  description = "The status of the node group."
-  value       = aws_eks_node_group.node_group.status
+  value = module.eks.node_groups["eks_nodes"].status
 }
 
-output "node_group_instance_types" {
-  description = "The instance types of the EKS worker nodes."
-  value       = aws_eks_node_group.node_group.instance_types
+output "vpc_id" {
+  value = module.vpc.vpc_id
+}
+
+output "subnet_ids" {
+  value = module.vpc.private_subnets
 }
 

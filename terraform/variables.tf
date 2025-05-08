@@ -1,68 +1,12 @@
-# variables.tf
-
-variable "region" {
-  description = "The AWS region to create resources in."
+variable "aws_region" {
+  description = "AWS region"
   type        = string
-  default     = "ap-south-1"  # Change this to your preferred region
+  default     = "us-east-1"
 }
 
 variable "cluster_name" {
-  description = "The name of the EKS cluster."
+  description = "EKS Cluster Name"
   type        = string
-  default     = "devops-eks-cluster"
-}
-
-variable "k8s_version" {
-  description = "The Kubernetes version to be used in the EKS cluster."
-  type        = string
-  default     = "1.21"  # Change this to your preferred Kubernetes version
-}
-
-variable "node_group_instance_types" {
-  description = "The instance types for the EKS worker nodes."
-  type        = list(string)
-  default     = ["t3.medium"]
-}
-
-variable "node_group_desired_size" {
-  description = "The desired number of nodes in the node group."
-  type        = number
-  default     = 2
-}
-
-variable "node_group_max_size" {
-  description = "The maximum number of nodes in the node group."
-  type        = number
-  default     = 3
-}
-
-variable "node_group_min_size" {
-  description = "The minimum number of nodes in the node group."
-  type        = number
-  default     = 1
-}
-
-variable "vpc_cidr_block" {
-  description = "The CIDR block for the VPC."
-  type        = string
-  default     = "10.0.0.0/16"
-}
-
-variable "subnet_1_cidr_block" {
-  description = "The CIDR block for the first subnet."
-  type        = string
-  default     = "10.0.1.0/24"
-}
-
-variable "subnet_2_cidr_block" {
-  description = "The CIDR block for the second subnet."
-  type        = string
-  default     = "10.0.2.0/24"
-}
-
-variable "vpc_availability_zones" {
-  description = "Availability zones for the VPC subnets."
-  type        = list(string)
-  default     = ["ap-south-1a", "ap-south-1b"]  # Modify as per your region's availability zones
+  default     = "my-eks-cluster"
 }
 
