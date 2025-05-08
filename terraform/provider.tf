@@ -1,11 +1,11 @@
-# Provider Configuration for AWS
+# provider.tf
+
 provider "aws" {
-  region = var.aws_region
+  region = var.region
 }
 
-# AWS EKS provider
 provider "aws" {
-  region = var.aws_region
-  version = "~> 4.0" # Ensure using an appropriate version
+  alias  = "east"
+  region = "us-east-1"  # Update if you need to use a different region for some resources
 }
 
