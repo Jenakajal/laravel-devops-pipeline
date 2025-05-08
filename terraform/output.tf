@@ -15,7 +15,7 @@ output "eks_cluster_endpoint" {
 
 output "eks_cluster_kubeconfig" {
   description = "Kubeconfig for EKS cluster"
-  value       = module.eks.kubeconfig
+  value       = "aws eks --region ${var.aws_region} update-kubeconfig --name ${module.eks.cluster_name}"
   sensitive   = true
 }
 
