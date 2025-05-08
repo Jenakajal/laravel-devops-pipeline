@@ -83,6 +83,11 @@ resource "aws_iam_role_policy_attachment" "ecr_read_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
+resource "aws_iam_role_policy_attachment" "eks_cni_policy" {
+  role       = aws_iam_role.eks_node_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+}
+
 # ------------------------
 # EKS Cluster
 # ------------------------
@@ -103,8 +108,8 @@ resource "aws_eks_cluster" "eks_cluster" {
 resource "aws_eks_node_group" "node_group" {
   cluster_name    = aws_eks_cluster.eks_cluster.name
   node_group_name = "${var.cluster_name}-nodes"
-  node_role_arn   = aws_iam_role.eks_node_role.arn
-  subnet_ids      = [aws_subnet.subnet1.id, aws_subnet.subnet2.id]
+  node_role_arn   = aws_iam_role.eks_node_role.arn  # Fix this line
+  subnet_ids      = [aws_subnet.subnet1.id, aws_subnet.subnet2.id]  # Fix this line
 
   scaling_config {
     desired_size = 2  # Ensure this is added
@@ -115,7 +120,8 @@ resource "aws_eks_node_group" "node_group" {
   depends_on = [
     aws_eks_cluster.eks_cluster,
     aws_iam_role_policy_attachment.eks_worker_node_policy,
-    aws_iam_role_policy_attachment.ecr_read_policy
+    aws_iam_role_policy_attachment.ecr_read_policy,
+    aws_iam_role_policy_attachment.eks_cni_policy
   ]
 }
 
