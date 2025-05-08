@@ -16,7 +16,7 @@ pipeline {
                     sh '''
                     cd terraform
                     terraform init
-                    terraform apply -auto-approve
+                    terraform apply -auto-approve -var-file="terraform.tfvars"
                     '''
                 }
             }
