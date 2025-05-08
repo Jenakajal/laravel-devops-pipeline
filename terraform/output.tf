@@ -1,26 +1,25 @@
-output "vpc_id" {
-  description = "The ID of the VPC"
-  value       = module.vpc.vpc_id
-}
-
 output "eks_cluster_name" {
-  description = "The name of the EKS cluster"
-  value       = module.eks.cluster_name
+  description = "EKS Cluster Name"
+  value       = module.eks.cluster_id
 }
 
 output "eks_cluster_endpoint" {
-  description = "The endpoint of the EKS cluster"
+  description = "EKS Cluster API endpoint"
   value       = module.eks.cluster_endpoint
 }
 
-output "eks_cluster_kubeconfig" {
-  description = "Command to update local kubeconfig for EKS"
-  value       = "aws eks --region ${var.aws_region} update-kubeconfig --name ${module.eks.cluster_name}"
-  sensitive   = true
+output "eks_node_group_name" {
+  description = "EKS Node Group Name"
+  value       = module.eks.node_groups["eks_nodes"].id
 }
 
-output "eks_node_group_name" {
-  description = "Name of the EKS managed node group"
-  value       = module.eks.eks_managed_node_groups["eks_nodes"].name
+output "eks_node_group_role" {
+  description = "EKS Node Group Role ARN"
+  value       = aws_iam_role.eks_role.arn
+}
+
+output "eks_cluster_security_group" {
+  description = "EKS Cluster Security Group"
+  value       = aws_security_group.eks_worker_sec_group.id
 }
 

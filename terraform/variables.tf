@@ -1,12 +1,15 @@
-variable "aws_region" {
-  description = "AWS region to deploy resources"
+variable "key_name" {
+  description = "The EC2 Key Name to allow access to the EKS instances"
   type        = string
-  default     = "us-east-1"
 }
 
-variable "cluster_name" {
-  description = "Name of the EKS Cluster"
+variable "region" {
+  description = "AWS region"
+  default     = "us-west-2"  # Adjust region accordingly
+}
+
+variable "vpc_id" {
+  description = "VPC ID"
   type        = string
-  default     = "my-eks-cluster"
 }
 
