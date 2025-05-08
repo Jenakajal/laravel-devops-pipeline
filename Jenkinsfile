@@ -10,13 +10,20 @@ pipeline {
 
     stages {
 
+        stage('Checkout Code') {
+            steps {
+                checkout scm
+            }
+        }
+
+        // Provision EKS Infrastructure with Terraform
         stage('Provision EKS Infrastructure with Terraform') {
             steps {
                 script {
                     sh '''
                     cd terraform
                     terraform init
-                    terraform apply -auto-approve -var-file="terraform.tfvars"
+                    terraform apply -auto-approve
                     '''
                 }
             }
@@ -25,6 +32,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
+                    // Build the Docker image with correct build context
                     sh 'docker build -t $IMAGE_NAME -f Dockerfile .'
                 }
             }
