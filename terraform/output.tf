@@ -14,13 +14,13 @@ output "eks_cluster_endpoint" {
 }
 
 output "eks_cluster_kubeconfig" {
-  description = "Kubeconfig for EKS cluster"
+  description = "Command to update local kubeconfig for EKS"
   value       = "aws eks --region ${var.aws_region} update-kubeconfig --name ${module.eks.cluster_name}"
   sensitive   = true
 }
 
-output "eks_node_group" {
-  description = "The name of the node group"
-  value       = module.eks.eks_managed_node_groups["eks_nodes"].node_group_name
+output "eks_node_group_name" {
+  description = "Name of the EKS managed node group"
+  value       = module.eks.eks_managed_node_groups["eks_nodes"].name
 }
 
