@@ -11,6 +11,8 @@ provider "aws" {
   region = var.region
 }
 
+data "aws_availability_zones" "available" {}
+
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "5.1.2"
@@ -31,8 +33,6 @@ module "vpc" {
     "kubernetes.io/cluster/${var.cluster_name}" = "shared"
   }
 }
-
-data "aws_availability_zones" "available" {}
 
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
@@ -63,11 +63,18 @@ output "cluster_name" {
   value = module.eks.cluster_name
 }
 
-output "kubeconfig" {
-  value     = module.eks.kubeconfig
+output "cluster_endpoint" {
+  value = module.eks.cluster_endpoint
+}
+
+output "cluster_certificate_authority_data" {
+  value     = module.eks.cluster_certificate_authority_data
   sensitive = true
 }
 
 output "vpc_id" {
   value = module.vpc.vpc_id
 }
+
+
+
