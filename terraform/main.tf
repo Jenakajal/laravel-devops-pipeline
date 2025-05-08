@@ -4,7 +4,7 @@ provider "aws" {
 
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "3.19.0"
+  version = "5.1.1"  # ✅ Updated to avoid deprecated arguments
 
   name = "eks-vpc"
   cidr = "10.0.0.0/16"
@@ -24,6 +24,8 @@ module "vpc" {
 
 module "eks" {
   source          = "terraform-aws-modules/eks/aws"
+  version         = "20.8.4"  # ✅ Recent stable EKS module version
+
   cluster_name    = var.cluster_name
   cluster_version = "1.27"
   subnet_ids      = module.vpc.private_subnets
@@ -31,11 +33,12 @@ module "eks" {
 
   eks_managed_node_groups = {
     eks_nodes = {
-      desired_size    = 2
-      max_size        = 3
-      min_size        = 1
-      instance_types  = ["t3.medium"]
-      ami_type        = "AL2_x86_64"
+      desired_size = 2
+      max_size     = 3
+      min_size     = 1
+
+      instance_types = ["t3.medium"]
+      ami_type       = "AL2_x86_64"
     }
   }
 
