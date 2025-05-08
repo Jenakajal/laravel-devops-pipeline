@@ -16,7 +16,6 @@ pipeline {
             }
         }
 
-        // Provision EKS Infrastructure with Terraform
         stage('Provision EKS Infrastructure with Terraform') {
             steps {
                 script {
@@ -30,16 +29,27 @@ pipeline {
             }
         }
 
-        // Wait for EKS Node Group to be Active
-        stage('Wait for EKS Node Group to be Active') {
+        stage('Wait for EKS Cluster and Node Group to be Active') {
             steps {
                 script {
-                    def eksNodeGroupStatus = sh(script: "aws eks describe-nodegroup --cluster-name devops-eks-cluster --nodegroup-name devops-eks-cluster-nodes --query 'nodegroup.status'", returnStdout: true).trim()
+                    // Wait for EKS cluster to be active
+                    sh "aws eks wait cluster-active --name devops-eks-cluster --region $AWS_REGION"
+
+                    // Wait for Node Group to be active (corrected name: eks_nodes)
+                    def eksNodeGroupStatus = sh(
+                        script: "aws eks describe-nodegroup --cluster-name devops-eks-cluster --nodegroup-name eks_nodes --region $AWS_REGION --query 'nodegroup.status' --output text",
+                        returnStdout: true
+                    ).trim()
+
                     while (eksNodeGroupStatus != 'ACTIVE') {
                         echo "Waiting for EKS Node Group to become ACTIVE. Current status: ${eksNodeGroupStatus}"
-                        sleep(30)  // Wait 30 seconds before checking again
-                        eksNodeGroupStatus = sh(script: "aws eks describe-nodegroup --cluster-name devops-eks-cluster --nodegroup-name devops-eks-cluster-nodes --query 'nodegroup.status'", returnStdout: true).trim()
+                        sleep(30)
+                        eksNodeGroupStatus = sh(
+                            script: "aws eks describe-nodegroup --cluster-name devops-eks-cluster --nodegroup-name eks_nodes --region $AWS_REGION --query 'nodegroup.status' --output text",
+                            returnStdout: true
+                        ).trim()
                     }
+
                     echo "EKS Node Group is now ACTIVE."
                 }
             }
