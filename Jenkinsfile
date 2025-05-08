@@ -35,9 +35,9 @@ pipeline {
                     // Wait for EKS cluster to be active
                     sh "aws eks wait cluster-active --name devops-eks-cluster --region $AWS_REGION"
 
-                    // Wait for Node Group to be active (corrected name: eks_nodes)
+                    // Wait for Node Group to be active (corrected name: jenkins_nodes)
                     def eksNodeGroupStatus = sh(
-                        script: "aws eks describe-nodegroup --cluster-name devops-eks-cluster --nodegroup-name eks_nodes --region $AWS_REGION --query 'nodegroup.status' --output text",
+                        script: "aws eks describe-nodegroup --cluster-name devops-eks-cluster --nodegroup-name jenkins_nodes --region $AWS_REGION --query 'nodegroup.status' --output text",
                         returnStdout: true
                     ).trim()
 
@@ -45,7 +45,7 @@ pipeline {
                         echo "Waiting for EKS Node Group to become ACTIVE. Current status: ${eksNodeGroupStatus}"
                         sleep(30)
                         eksNodeGroupStatus = sh(
-                            script: "aws eks describe-nodegroup --cluster-name devops-eks-cluster --nodegroup-name eks_nodes --region $AWS_REGION --query 'nodegroup.status' --output text",
+                            script: "aws eks describe-nodegroup --cluster-name devops-eks-cluster --nodegroup-name jenkins_nodes --region $AWS_REGION --query 'nodegroup.status' --output text",
                             returnStdout: true
                         ).trim()
                     }
