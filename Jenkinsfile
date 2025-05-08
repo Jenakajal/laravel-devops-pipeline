@@ -23,8 +23,24 @@ pipeline {
                     sh '''
                     cd terraform
                     terraform init
+                    terraform plan
                     terraform apply -auto-approve
                     '''
+                }
+            }
+        }
+
+        // Wait for EKS Node Group to be Active
+        stage('Wait for EKS Node Group to be Active') {
+            steps {
+                script {
+                    def eksNodeGroupStatus = sh(script: "aws eks describe-nodegroup --cluster-name devops-eks-cluster --nodegroup-name devops-eks-cluster-nodes --query 'nodegroup.status'", returnStdout: true).trim()
+                    while (eksNodeGroupStatus != 'ACTIVE') {
+                        echo "Waiting for EKS Node Group to become ACTIVE. Current status: ${eksNodeGroupStatus}"
+                        sleep(30)  // Wait 30 seconds before checking again
+                        eksNodeGroupStatus = sh(script: "aws eks describe-nodegroup --cluster-name devops-eks-cluster --nodegroup-name devops-eks-cluster-nodes --query 'nodegroup.status'", returnStdout: true).trim()
+                    }
+                    echo "EKS Node Group is now ACTIVE."
                 }
             }
         }
@@ -32,7 +48,6 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Build the Docker image with correct build context
                     sh 'docker build -t $IMAGE_NAME -f Dockerfile .'
                 }
             }
