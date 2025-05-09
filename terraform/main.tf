@@ -31,8 +31,6 @@ module "vpc" {
 
   tags = {
     "kubernetes.io/cluster/${var.cluster_name}" = "shared"
-    Environment = "dev"
-    Terraform   = "true"
   }
 }
 
@@ -58,31 +56,6 @@ module "eks" {
   tags = {
     Environment = "dev"
     Terraform   = "true"
-  }
-}
-
-resource "aws_kms_alias" "this" {
-  name          = "alias/eks/${var.cluster_name}-kms"
-  target_key_id = aws_kms_key.this.key_id
-  lifecycle {
-    prevent_destroy = true
-  }
-
-  # Ensure KMS alias doesn't already exist
-  create_before_destroy = true
-}
-
-resource "aws_kms_key" "this" {
-  description = "KMS key for EKS cluster"
-  deletion_window_in_days = 7
-}
-
-resource "aws_cloudwatch_log_group" "this" {
-  name = "/aws/eks/${var.cluster_name}/cluster"
-  retention_in_days = 30
-
-  lifecycle {
-    create_before_destroy = true
   }
 }
 
