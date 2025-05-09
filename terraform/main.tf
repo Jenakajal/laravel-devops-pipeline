@@ -2,144 +2,152 @@ provider "aws" {
   region = var.region
 }
 
-# Create VPC
+# VPC
 resource "aws_vpc" "main" {
   cidr_block = var.vpc_cidr
-  enable_dns_support = true
+  enable_dns_support   = true
   enable_dns_hostnames = true
+
   tags = {
-    Name = "devops-vpc"
+    Name = "eks-vpc"
   }
 }
 
-# Create Public Subnets
-resource "aws_subnet" "public_subnet" {
-  count = length(var.public_subnets)
-  vpc_id = aws_vpc.main.id
-  cidr_block = element(var.public_subnets, count.index)
-  availability_zone = element(data.aws_availability_zones.available.names, count.index)
+resource "aws_subnet" "public" {
+  count             = length(var.public_subnets)
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = var.public_subnets[count.index]
   map_public_ip_on_launch = true
+  availability_zone = element(["ap-south-1a", "ap-south-1b"], count.index)
+
   tags = {
-    Name = "Public Subnet ${count.index}"
+    Name = "public-subnet-${count.index + 1}"
   }
 }
 
-# Create Private Subnets
-resource "aws_subnet" "private_subnet" {
-  count = length(var.private_subnets)
-  vpc_id = aws_vpc.main.id
-  cidr_block = element(var.private_subnets, count.index)
-  availability_zone = element(data.aws_availability_zones.available.names, count.index)
-  tags = {
-    Name = "Private Subnet ${count.index}"
-  }
-}
-
-# Internet Gateway for Public Access
+# Internet Gateway and Route Table
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main.id
-  tags = {
-    Name = "devops-igw"
+}
+
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw.id
   }
 }
 
-# Route Table for Public Subnet
-resource "aws_route_table" "public_route_table" {
-  vpc_id = aws_vpc.main.id
+resource "aws_route_table_association" "public" {
+  count          = length(aws_subnet.public)
+  subnet_id      = aws_subnet.public[count.index].id
+  route_table_id = aws_route_table.public.id
 }
 
-resource "aws_route" "public_route" {
-  route_table_id         = aws_route_table.public_route_table.id
-  destination_cidr_block = "0.0.0.0/0"
-  gateway_id             = aws_internet_gateway.igw.id
-}
-
-# Associate Public Subnets with Route Table
-resource "aws_route_table_association" "public_route_association" {
-  count          = length(aws_subnet.public_subnet)
-  subnet_id      = aws_subnet.public_subnet[count.index].id
-  route_table_id = aws_route_table.public_route_table.id
-}
-
-# Data for Availability Zones
-data "aws_availability_zones" "available" {}
-
-# IAM Role for EKS
+# IAM Role for EKS Cluster
 resource "aws_iam_role" "eks_cluster_role" {
+  name = "eks-cluster-role"
+
   assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action    = "sts:AssumeRole"
-        Effect    = "Allow"
-        Principal = {
-          Service = "eks.amazonaws.com"
-        }
+    Version = "2012-10-17",
+    Statement = [{
+      Effect = "Allow",
+      Principal = {
+        Service = "eks.amazonaws.com"
       },
-    ]
+      Action = "sts:AssumeRole"
+    }]
   })
+}
+
+resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
+  role       = aws_iam_role.eks_cluster_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
 }
 
 # EKS Cluster
-resource "aws_eks_cluster" "eks-cluster" {
+resource "aws_eks_cluster" "eks" {
   name     = var.cluster_name
   role_arn = aws_iam_role.eks_cluster_role.arn
 
+  version = var.cluster_version
+
   vpc_config {
-    subnet_ids = aws_subnet.public_subnet[*].id
+    subnet_ids = [for s in aws_subnet.public : s.id]
   }
 
-  version = var.cluster_version
+  depends_on = [aws_iam_role_policy_attachment.eks_cluster_policy]
 }
 
-# EKS Node Group IAM Role
-resource "aws_iam_role" "eks_node_group_role" {
+# IAM Role for Node Group
+resource "aws_iam_role" "eks_node_role" {
+  name = "eks-node-role"
+
   assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action    = "sts:AssumeRole"
-        Effect    = "Allow"
-        Principal = {
-          Service = "ec2.amazonaws.com"
-        }
+    Version = "2012-10-17",
+    Statement = [{
+      Effect = "Allow",
+      Principal = {
+        Service = "ec2.amazonaws.com"
       },
-    ]
+      Action = "sts:AssumeRole"
+    }]
   })
 }
 
-# Node Group
-resource "aws_eks_node_group" "eks-node-group" {
-  cluster_name    = aws_eks_cluster.eks-cluster.name
+resource "aws_iam_role_policy_attachment" "node_AmazonEKSWorkerNodePolicy" {
+  role       = aws_iam_role.eks_node_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+}
+
+resource "aws_iam_role_policy_attachment" "node_AmazonEKS_CNI_Policy" {
+  role       = aws_iam_role.eks_node_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+}
+
+resource "aws_iam_role_policy_attachment" "node_AmazonEC2ContainerRegistryReadOnly" {
+  role       = aws_iam_role.eks_node_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
+# EKS Node Group
+resource "aws_eks_node_group" "node_group" {
+  cluster_name    = aws_eks_cluster.eks.name
   node_group_name = var.node_group_name
-  node_role_arn   = aws_iam_role.eks_node_group_role.arn
-  subnet_ids      = aws_subnet.public_subnet[*].id
+  node_role_arn   = aws_iam_role.eks_node_role.arn
+  subnet_ids      = [for s in aws_subnet.public : s.id]
+
   scaling_config {
     desired_size = var.desired_size
     max_size     = var.max_size
     min_size     = var.min_size
   }
+
   instance_types = var.node_group_instance_types
+
+  depends_on = [
+    aws_eks_cluster.eks,
+    aws_iam_role_policy_attachment.node_AmazonEKSWorkerNodePolicy,
+    aws_iam_role_policy_attachment.node_AmazonEKS_CNI_Policy,
+    aws_iam_role_policy_attachment.node_AmazonEC2ContainerRegistryReadOnly
+  ]
 }
 
 # Outputs
 output "cluster_name" {
-  value = aws_eks_cluster.eks-cluster.name
+  value = aws_eks_cluster.eks.name
 }
 
 output "cluster_endpoint" {
-  value = aws_eks_cluster.eks-cluster.endpoint
+  value = aws_eks_cluster.eks.endpoint
+}
+
+output "cluster_ca" {
+  value = aws_eks_cluster.eks.certificate_authority[0].data
 }
 
 output "vpc_id" {
   value = aws_vpc.main.id
-}
-
-output "cluster_certificate_authority_data" {
-  value = aws_eks_cluster.eks-cluster.certificate_authority[0].data
-}
-
-output "eks_node_group_name" {
-  value = aws_eks_node_group.eks-node-group.node_group_name
 }
 
