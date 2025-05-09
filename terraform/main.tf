@@ -1,6 +1,18 @@
+# Configure AWS Provider
+provider "aws" {
+  region = var.region
+}
+
+# Fetch available availability zones in the AWS region
+data "aws_availability_zones" "available" {
+  state = "available"
+}
+
 # Define the AWS VPC
 resource "aws_vpc" "main" {
   cidr_block = var.vpc_cidr_block
+  enable_dns_support = true
+  enable_dns_hostnames = true
 }
 
 # Define the Public Subnets
@@ -39,6 +51,13 @@ resource "aws_iam_role" "eks_cluster_role" {
   })
 }
 
+# Attach IAM Policy to EKS Cluster Role
+resource "aws_iam_policy_attachment" "eks_cluster_policy_attach" {
+  name       = "eks-cluster-policy-attach"
+  roles      = [aws_iam_role.eks_cluster_role.name]
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+}
+
 # Define the EKS Cluster
 resource "aws_eks_cluster" "eks" {
   name     = var.eks_cluster_name
@@ -64,6 +83,13 @@ resource "aws_iam_role" "eks_node_role" {
       },
     ]
   })
+}
+
+# Attach IAM Policy to EKS Node Role
+resource "aws_iam_policy_attachment" "eks_node_policy_attach" {
+  name       = "eks-node-policy-attach"
+  roles      = [aws_iam_role.eks_node_role.name]
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
 }
 
 # Define EKS Node Group

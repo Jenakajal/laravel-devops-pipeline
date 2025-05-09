@@ -1,42 +1,49 @@
-# Variable for VPC CIDR Block
+# Declare the VPC CIDR block
 variable "vpc_cidr_block" {
-  description = "CIDR block for the VPC"
+  description = "The CIDR block for the VPC"
   type        = string
   default     = "10.0.0.0/16"
 }
 
-# Variable for the number of public subnets
+# Declare the count for public subnets
 variable "public_subnet_count" {
-  description = "Number of public subnets to create"
+  description = "The number of public subnets to create"
   type        = number
   default     = 2
 }
 
-# Variable for the EKS Cluster name
+# Declare the name of the EKS cluster
 variable "eks_cluster_name" {
-  description = "Name of the EKS cluster"
+  description = "The name of the EKS cluster"
   type        = string
   default     = "eks-cluster"
 }
 
-# Variable for the EKS Cluster IAM Role name
+# Declare the name of the EKS cluster role
 variable "eks_cluster_role_name" {
-  description = "Name for the EKS Cluster IAM Role"
+  description = "The name of the EKS cluster role"
   type        = string
   default     = "eks-cluster-role"
 }
 
-# Variable for the EKS Node IAM Role name
+# Declare the name of the EKS node role
 variable "eks_node_role_name" {
-  description = "Name for the EKS Node IAM Role"
+  description = "The name of the EKS node role"
   type        = string
   default     = "eks-node-role"
 }
 
-# Variable for the EKS Node Group name
+# Declare the name of the EKS node group
 variable "eks_node_group_name" {
-  description = "Name for the EKS Node Group"
+  description = "The name of the EKS node group"
   type        = string
   default     = "eks-node-group"
+}
+
+# Declare the AWS region to deploy resources
+variable "region" {
+  description = "The AWS region to deploy the resources"
+  type        = string
+  default     = "us-west-2"
 }
 
