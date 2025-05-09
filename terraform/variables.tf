@@ -1,40 +1,59 @@
-module "eks" {
-  source  = "terraform-aws-modules/eks/aws"
-  version = "20.13.0"
-
-  cluster_name    = var.cluster_name
-  cluster_version = var.cluster_version
-
-  subnet_ids = module.vpc.private_subnets
-  vpc_id     = module.vpc.vpc_id
-
-  eks_managed_node_groups = {
-  eks_nodes = {
-    instance_types = var.node_group_instance_types
-    desired_size   = var.desired_size
-    min_size       = var.min_size
-    max_size       = var.max_size
-  }
+variable "region" {
+  description = "AWS Region"
+  type        = string
+  default     = "us-west-2"
 }
 
-  tags = {
-    Environment = "dev"
-    Terraform   = "true"
-  }
+variable "vpc_cidr" {
+  description = "CIDR block for the VPC"
+  type        = string
+  default     = "10.0.0.0/16"
 }
 
-output "cluster_name" {
-  value = module.eks.cluster_name
+variable "public_subnets" {
+  description = "List of public subnet CIDRs"
+  type        = list(string)
+  default     = ["10.0.1.0/24", "10.0.2.0/24"]
 }
 
-output "kubeconfig" {
-  value     = module.eks.kubeconfig
-  sensitive = true
-}
-}
-
-output "vpc_id" {
-  value = module.vpc.vpc_id
+variable "private_subnets" {
+  description = "List of private subnet CIDRs"
+  type        = list(string)
+  default     = ["10.0.101.0/24", "10.0.102.0/24"]
 }
 
+variable "cluster_name" {
+  description = "EKS cluster name"
+  type        = string
+  default     = "eks-cluster"
+}
 
+variable "cluster_version" {
+  description = "EKS cluster version"
+  type        = string
+  default     = "1.29"
+}
+
+variable "node_group_instance_types" {
+  description = "List of instance types for the EKS node group"
+  type        = list(string)
+  default     = ["t3.medium"]
+}
+
+variable "desired_size" {
+  description = "Desired number of worker nodes in the node group"
+  type        = number
+  default     = 2
+}
+
+variable "min_size" {
+  description = "Minimum number of worker nodes in the node group"
+  type        = number
+  default     = 1
+}
+
+variable "max_size" {
+  description = "Maximum number of worker nodes in the node group"
+  type        = number
+  default     = 3
+}

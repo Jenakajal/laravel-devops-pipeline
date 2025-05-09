@@ -44,14 +44,14 @@ module "eks" {
   subnet_ids = module.vpc.private_subnets
   vpc_id     = module.vpc.vpc_id
 
-eks_managed_node_groups = {
-  eks_nodes = {
-    instance_types = var.node_group_instance_types
-    desired_size   = var.desired_size
-    min_size       = var.min_size
-    max_size       = var.max_size
+  eks_managed_node_groups = {
+    default_node_group = {
+      instance_types = var.node_group_instance_types
+      desired_size   = var.desired_size
+      min_size       = var.min_size
+      max_size       = var.max_size
+    }
   }
-}
 
   tags = {
     Environment = "dev"
