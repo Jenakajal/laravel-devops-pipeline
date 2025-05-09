@@ -1,88 +1,46 @@
 provider "aws" {
-  region = "us-west-2"  # Modify the region as per your setup
+  region = "us-west-2"  # Replace with your preferred AWS region
 }
 
-# Data Sources
-data "aws_iam_policy_document" "eks_kms_key_policy" {
-  statement {
-    actions   = ["kms:Encrypt", "kms:Decrypt"]
-    resources = ["*"]
-  }
-}
-
-# IAM Role for EKS
-resource "aws_iam_role" "this" {
-  name = "eks-role"
-
-  assume_role_policy = data.aws_iam_policy_document.eks_kms_key_policy.json
-}
-
-# KMS Key for Encryption
-resource "aws_kms_key" "this" {
-  description = "KMS key for encrypting EKS resources"
-  policy      = data.aws_iam_policy_document.eks_kms_key_policy.json
-}
-
-# KMS Alias for the encryption key
-resource "aws_kms_alias" "this" {
-  name          = "alias/eks-encryption"  # Corrected argument
-  target_key_id = aws_kms_key.this.key_id
-}
-
-# VPC, Subnets, and other networking configurations
-resource "aws_vpc" "main" {
-  cidr_block = "10.0.0.0/16"
-}
-
-resource "aws_subnet" "private" {
-  count = 2
-  vpc_id = aws_vpc.main.id
-  cidr_block = "10.0.${count.index}.0/24"
-  availability_zone = "us-west-2a"
-}
-
-# EKS Cluster
+# Define EKS cluster
 resource "aws_eks_cluster" "this" {
-  name     = var.cluster_name
-  role_arn = aws_iam_role.this.arn
-  vpc_config {
-    subnet_ids = aws_subnet.private.*.id
-  }
+  name     = "example-cluster"
+  role_arn = var.eks_role_arn
 
-  encryption_config {
-    provider {
-      key_arn = aws_kms_key.this.arn
-    }
-    resources = ["secrets"]
+  # Define VPC and subnet configuration here (adjust to match your setup)
+  vpc_config {
+    subnet_ids = [var.vpc_id]  # Use your VPC ID here
   }
 }
 
-# EKS Node Group
+# Define EKS Node Group
 resource "aws_eks_node_group" "this" {
-  node_group_name = "my-node-group"
+  node_group_name = "example-node-group"
   cluster_name    = aws_eks_cluster.this.name
-  node_role_arn   = aws_iam_role.this.arn
-  subnet_ids      = aws_subnet.private.*.id
+  node_role_arn   = var.eks_role_arn
 
+  # Set node group size from the provided variables
+  desired_size = var.desired_size
+  min_size     = var.min_size
+  max_size     = var.max_size
+
+  # Optional: Define instance types or other configurations for the nodes
+  instance_types = ["t3.medium"]
+
+  # Optional: Define additional configuration like scaling and disk size
   scaling_config {
     desired_size = var.desired_size
     min_size     = var.min_size
     max_size     = var.max_size
   }
 
-  instance_types = var.node_group_instance_types
+  # Define other configurations like subnets if needed
+  subnet_ids = [var.vpc_id]  # Replace with actual subnet IDs
 }
 
-# Output EKS Cluster Details
-output "cluster_name" {
-  value = aws_eks_cluster.this.name
-}
-
-output "cluster_endpoint" {
-  value = aws_eks_cluster.this.endpoint
-}
-
-output "cluster_arn" {
-  value = aws_eks_cluster.this.arn
+# Example for KMS Key
+resource "aws_kms_alias" "this" {
+  name          = "alias/eks-encryption"
+  target_key_id = "arn:aws:kms:us-west-2:123456789012:key/abc12345-6789-0123-4567-89abcdef0123"  # Replace with actual KMS key ID
 }
 
