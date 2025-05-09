@@ -1,29 +1,25 @@
-provider "aws" {
-  region = "us-west-2" # Replace with your AWS region
+variable "eks_role_arn" {
+  description = "IAM role ARN for EKS"
+  type        = string
 }
 
-resource "aws_eks_cluster" "this" {
-  name     = "my-cluster"
-  role_arn = var.eks_role_arn
-  vpc_config {
-    subnet_ids = ["subnet-12345678"] # Replace with your subnet IDs
-  }
-
-  # Other cluster configurations
+variable "vpc_id" {
+  description = "VPC ID for the EKS Cluster"
+  type        = string
 }
 
-resource "aws_eks_node_group" "this" {
-  cluster_name    = aws_eks_cluster.this.name
-  node_group_name = "my-node-group"
-  node_role_arn   = var.eks_role_arn
-  subnet_ids      = ["subnet-12345678"] # Replace with your subnet IDs
+variable "desired_size" {
+  description = "Desired number of nodes in the EKS Node Group"
+  type        = number
+}
 
-  scaling_config {
-    desired_size = var.desired_size
-    min_size     = var.min_size
-    max_size     = var.max_size
-  }
+variable "min_size" {
+  description = "Minimum number of nodes in the EKS Node Group"
+  type        = number
+}
 
-  # Additional node group configurations
+variable "max_size" {
+  description = "Maximum number of nodes in the EKS Node Group"
+  type        = number
 }
 
