@@ -1,17 +1,6 @@
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-  }
-}
-
 provider "aws" {
   region = var.region
 }
-
-data "aws_availability_zones" "available" {}
 
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
@@ -56,6 +45,38 @@ module "eks" {
   tags = {
     Environment = "dev"
     Terraform   = "true"
+  }
+}
+
+resource "aws_iam_role" "this" {
+  name               = "${var.cluster_name}-role"
+  assume_role_policy = data.aws_iam_policy_document.assume_role_policy.json
+
+  tags = {
+    Name = "${var.cluster_name}-role"
+  }
+}
+
+resource "aws_iam_role_policy" "this" {
+  role   = aws_iam_role.this.id
+  policy = data.aws_iam_policy_document.role_policy.json
+}
+
+resource "aws_kms_alias" "this" {
+  name          = "alias/eks/${var.cluster_name}"
+  target_key_id = aws_kms_key.this.key_id
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_cloudwatch_log_group" "this" {
+  name = "/aws/eks/${var.cluster_name}/cluster"
+
+  lifecycle {
+    prevent_destroy     = true
+    create_before_destroy = true
   }
 }
 
