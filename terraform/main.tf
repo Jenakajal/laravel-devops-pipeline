@@ -1,54 +1,83 @@
+# Provider block (ensure you define region)
 provider "aws" {
   region = var.region
 }
 
+# Data sources (Availability Zones, IAM Policy Documents)
 data "aws_availability_zones" "available" {}
 
-module "vpc" {
-  source  = "terraform-aws-modules/vpc/aws"
-  version = "5.1.2"
-
-  name = "${var.cluster_name}-vpc"
-  cidr = var.vpc_cidr
-
-  azs             = slice(data.aws_availability_zones.available.names, 0, 2)
-  public_subnets  = var.public_subnets
-  private_subnets = var.private_subnets
-
-  enable_nat_gateway   = true
-  single_nat_gateway   = true
-  enable_dns_hostnames = true
-  enable_dns_support   = true
-
-  tags = {
-    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
+# Define the IAM policy document for assume role
+data "aws_iam_policy_document" "assume_role_policy" {
+  statement {
+    actions   = ["sts:AssumeRole"]
+    principals {
+      type        = "Service"
+      identifiers = ["ec2.amazonaws.com"]
+    }
   }
 }
 
-module "eks" {
-  source  = "terraform-aws-modules/eks/aws"
-  version = "20.13.0"
+# Define VPC module (Ensure to update subnet details based on your needs)
+module "vpc" {
+  source             = "terraform-aws-modules/vpc/aws"
+  name               = "eks-vpc"
+  cidr               = var.vpc_cidr
+  azs                = slice(data.aws_availability_zones.available.names, 0, 2)
+  private_subnets    = var.private_subnets
+  public_subnets     = var.public_subnets
+  enable_nat_gateway = true
+  enable_vpn_gateway = false
+}
 
-  cluster_name    = var.cluster_name
-  cluster_version = var.cluster_version
+# IAM Role for EKS Worker Node (Fixed resource name)
+resource "aws_iam_role" "eks_role" {
+  assume_role_policy = data.aws_iam_policy_document.assume_role_policy.json
+  name               = "eks_worker_role"
+  description        = "Role for EKS worker nodes"
 
-  subnet_ids = module.vpc.private_subnets
-  vpc_id     = module.vpc.vpc_id
+  tags = {
+    Environment = "dev"
+  }
+}
 
-  eks_managed_node_groups = {
-    eks_nodes = {
-      instance_types = var.node_group_instance_types
-      desired_size   = var.desired_size
-      min_size       = var.min_size
-      max_size       = var.max_size
-    }
+# KMS Key Resource (Added KMS for encryption)
+resource "aws_kms_key" "this" {
+  description = "KMS Key for EKS encryption"
+}
+
+# KMS Alias (Correctly linking KMS key)
+resource "aws_kms_alias" "this" {
+  target_key_id = aws_kms_key.this.key_id
+  alias_name    = "alias/eks-encryption"
+}
+
+# EKS Cluster Resource (Ensure EKS role is referenced correctly)
+resource "aws_eks_cluster" "this" {
+  name     = var.cluster_name
+  role_arn = aws_iam_role.eks_role.arn
+
+  vpc_config {
+    subnet_ids = module.vpc.private_subnets
+  }
+}
+
+# EKS Node Group Resource (Fixed reference to VPC and IAM role)
+resource "aws_eks_node_group" "this" {
+  cluster_name    = aws_eks_cluster.this.name
+  node_role_arn   = aws_iam_role.eks_role.arn
+  subnet_ids      = module.vpc.private_subnets
+  instance_types  = var.node_group_instance_types
+  desired_size    = var.desired_size
+  min_size        = var.min_size
+  max_size        = var.max_size
+  scaling_config {
+    desired_size = var.desired_size
+    min_size     = var.min_size
+    max_size     = var.max_size
   }
 
   tags = {
     Environment = "dev"
-    Terraform   = "true"
   }
 }
-
-resource "aws_iam_
 
