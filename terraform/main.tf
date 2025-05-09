@@ -1,82 +1,77 @@
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
 provider "aws" {
-  region = var.AWS_REGION
+  region = var.region
 }
 
-resource "aws_eks_cluster" "cluster" {
-  name     = "devops-eks-cluster"
-  role_arn = aws_iam_role.eks_cluster_role.arn
+data "aws_availability_zones" "available" {}
 
-  vpc_config {
-    subnet_ids = var.subnet_ids
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "5.1.2"
+
+  name = "${var.cluster_name}-vpc"
+  cidr = var.vpc_cidr
+
+  azs             = slice(data.aws_availability_zones.available.names, 0, 2)
+  public_subnets  = var.public_subnets
+  private_subnets = var.private_subnets
+
+  enable_nat_gateway   = true
+  single_nat_gateway   = true
+  enable_dns_hostnames = true
+  enable_dns_support   = true
+
+  tags = {
+    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
   }
-
-  depends_on = [aws_iam_role_policy_attachment.eks_cluster_policy]
 }
 
-resource "aws_eks_node_group" "node_group" {
-  cluster_name    = aws_eks_cluster.cluster.name
-  node_group_name = "jenkins-node-group"
-  node_role_arn   = aws_iam_role.eks_node_role.arn
-  subnet_ids      = var.subnet_ids
+module "eks" {
+  source  = "terraform-aws-modules/eks/aws"
+  version = "20.13.0"
 
-  scaling_config {
-    desired_size = 2
-    max_size     = 3
-    min_size     = 1
+  cluster_name    = var.cluster_name
+  cluster_version = var.cluster_version
+
+  subnet_ids = module.vpc.private_subnets
+  vpc_id     = module.vpc.vpc_id
+
+eks_managed_node_groups = {
+  eks_nodes = {
+    instance_types = var.node_group_instance_types
+    desired_size   = var.desired_size
+    min_size       = var.min_size
+    max_size       = var.max_size
   }
 }
 
-resource "aws_iam_role" "eks_cluster_role" {
-  name = "eks-cluster-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Principal = {
-          Service = "eks.amazonaws.com"
-        }
-        Effect = "Allow"
-        Sid    = ""
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
-  role       = aws_iam_role.eks_cluster_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
-}
-
-resource "aws_iam_role" "eks_node_role" {
-  name = "eks-node-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Principal = {
-          Service = "ec2.amazonaws.com"
-        }
-        Effect = "Allow"
-        Sid    = ""
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "eks_node_policy" {
-  role       = aws_iam_role.eks_node_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+  tags = {
+    Environment = "dev"
+    Terraform   = "true"
+  }
 }
 
 output "cluster_name" {
-  value = aws_eks_cluster.cluster.name
+  value = module.eks.cluster_name
 }
 
-output "node_group_name" {
-  value = aws_eks_node_group.node_group_name
+output "cluster_endpoint" {
+  value = module.eks.cluster_endpoint
 }
 
+output "cluster_certificate_authority_data" {
+  value     = module.eks.cluster_certificate_authority_data
+  sensitive = true
+}
+
+output "vpc_id" {
+  value = module.vpc.vpc_id
+}
