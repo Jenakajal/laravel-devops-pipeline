@@ -45,7 +45,7 @@ module "eks" {
   vpc_id     = module.vpc.vpc_id
 
   eks_managed_node_groups = {
-    default_node_group = {
+    "${var.node_group_name}" = {
       instance_types = var.node_group_instance_types
       desired_size   = var.desired_size
       min_size       = var.min_size
@@ -75,3 +75,4 @@ output "cluster_certificate_authority_data" {
 output "vpc_id" {
   value = module.vpc.vpc_id
 }
+

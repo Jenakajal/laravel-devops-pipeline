@@ -57,3 +57,10 @@ variable "max_size" {
   type        = number
   default     = 3
 }
+
+variable "node_group_name" {
+  description = "Name of the EKS managed node group"
+  type        = string
+  default     = "jenkins-node-group"
+}
+
