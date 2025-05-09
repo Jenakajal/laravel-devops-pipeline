@@ -31,6 +31,8 @@ module "vpc" {
 
   tags = {
     "kubernetes.io/cluster/${var.cluster_name}" = "shared"
+    Environment = "dev"
+    Terraform   = "true"
   }
 }
 
@@ -44,18 +46,43 @@ module "eks" {
   subnet_ids = module.vpc.private_subnets
   vpc_id     = module.vpc.vpc_id
 
-eks_managed_node_groups = {
-  eks_nodes = {
-    instance_types = var.node_group_instance_types
-    desired_size   = var.desired_size
-    min_size       = var.min_size
-    max_size       = var.max_size
+  eks_managed_node_groups = {
+    eks_nodes = {
+      instance_types = var.node_group_instance_types
+      desired_size   = var.desired_size
+      min_size       = var.min_size
+      max_size       = var.max_size
+    }
   }
-}
 
   tags = {
     Environment = "dev"
     Terraform   = "true"
+  }
+}
+
+resource "aws_kms_alias" "this" {
+  name          = "alias/eks/${var.cluster_name}-kms"
+  target_key_id = aws_kms_key.this.key_id
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  # Ensure KMS alias doesn't already exist
+  create_before_destroy = true
+}
+
+resource "aws_kms_key" "this" {
+  description = "KMS key for EKS cluster"
+  deletion_window_in_days = 7
+}
+
+resource "aws_cloudwatch_log_group" "this" {
+  name = "/aws/eks/${var.cluster_name}/cluster"
+  retention_in_days = 30
+
+  lifecycle {
+    create_before_destroy = true
   }
 }
 
@@ -75,3 +102,4 @@ output "cluster_certificate_authority_data" {
 output "vpc_id" {
   value = module.vpc.vpc_id
 }
+

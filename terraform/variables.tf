@@ -1,7 +1,7 @@
 variable "region" {
   description = "AWS Region"
   type        = string
-  default     = "us-west-2"
+  default     = "ap-south-1"
 }
 
 variable "vpc_cidr" {
@@ -57,3 +57,4 @@ variable "max_size" {
   type        = number
   default     = 3
 }
+
