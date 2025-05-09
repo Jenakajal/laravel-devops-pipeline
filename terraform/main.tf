@@ -1,5 +1,3 @@
-# main.tf
-
 provider "aws" {
   region = var.AWS_REGION
 }
@@ -7,6 +5,7 @@ provider "aws" {
 resource "aws_eks_cluster" "cluster" {
   name     = "devops-eks-cluster"
   role_arn = aws_iam_role.eks_cluster_role.arn
+
   vpc_config {
     subnet_ids = var.subnet_ids
   }
@@ -28,12 +27,12 @@ resource "aws_iam_role" "eks_cluster_role" {
     Version = "2012-10-17"
     Statement = [
       {
-        Action    = "sts:AssumeRole"
+        Action = "sts:AssumeRole"
         Principal = {
           Service = "eks.amazonaws.com"
         }
-        Effect    = "Allow"
-        Sid       = ""
+        Effect = "Allow"
+        Sid    = ""
       }
     ]
   })
@@ -51,12 +50,12 @@ resource "aws_iam_role" "eks_node_role" {
     Version = "2012-10-17"
     Statement = [
       {
-        Action    = "sts:AssumeRole"
+        Action = "sts:AssumeRole"
         Principal = {
           Service = "ec2.amazonaws.com"
         }
-        Effect    = "Allow"
-        Sid       = ""
+        Effect = "Allow"
+        Sid    = ""
       }
     ]
   })
@@ -72,6 +71,7 @@ output "cluster_name" {
 }
 
 output "node_group_name" {
-  value = aws_eks_node_group.node_group.node_group_name
+  value = aws_eks_node_group.node_group_name
 }
+`
 
